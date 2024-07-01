@@ -35,6 +35,7 @@
 
 (use-modules (srfi srfi-1))
 (use-modules (ice-9 match))
+(use-modules (ice-9 receive))
 
 (define reportname (N_ "Custom Budget Report"))
 
@@ -56,6 +57,8 @@
 (define opthelp-show-difference (N_ "Display the difference as budget - actual."))
 (define optname-accumulate (N_ "Rollover budget difference"))
 (define opthelp-accumulate (N_ "Values are accumulated across periods."))
+(define optname-selected-only (N_ "Exclude unselected amounts"))
+(define opthelp-selected-only (N_ "Accounts not displayed will not be counted in their parent account values."))
 (define optname-show-totalcol (N_ "Show Column with Totals"))
 (define opthelp-show-totalcol (N_ "Display a column with the row totals."))
 (define optname-show-zb-accounts (N_ "Include accounts with zero total balances and budget values"))
@@ -102,11 +105,96 @@
    options page opt-name enabled))
 
 ;; Debug logging
+(define current-time-string (number->string (current-time)))
 (define (debug-log message)
-  (let* ((out (open-file  "/home/reese/.local/share/gnucash/report-debug.log" "a") ))
-  (display message out)
-  (newline out)                    
-  (close-output-port out)))
+  (let* ((out (open-file
+                 (string-append "/home/reese/.local/share/gnucash/report-logs/custom-budget-report-" current-time-string ".log")
+                 "a")))
+    (display message out)
+    (newline out)
+    (close-output-port out)))
+
+;; WIP Get Unselected Child Accounts
+;; TODO: move
+;; TODO: update comment below to reflect that this case is fixed
+  ;; [x] top
+  ;;   [ ] parent
+  ;;     [ ] sibling accounts
+  ;;     [ ] sub accounts
+  ;;       [x] child account
+  ;; We can't simply subtract 'parent' from 'top' because the inner child still needs to be included :(
+  ;; Maybe a solution is to toss this approach and just make a flat list of all unselected accounts, then fetch their
+  ;;   balances _without their children_. How hard/easy is that to do?
+  ;; Probably we want to recurse from the top down, deciding what to do with each account. If it's not selected, remove
+  ;; it. Then recurse down into its children, and add any that _are_ selected. Similarly, if it's not selected, add it
+  ;; to the subtraction list and keep recursing
+(define (descendant-additions-subtractions parent-acct selected-accts)
+  ;; map-accts-by-guid takes a list of accounts and returns a hash table keyed by account GUID
+  (define (map-accts-by-guid acct-list)
+    (define accts-map (make-hash-table (length acct-list)))
+    (for-each
+      (lambda (acct)
+        (hash-set! accts-map (gncAccountGetGUID acct) acct))
+      acct-list)
+    accts-map)
+
+  (define (get-add-subtract-descendants acct selected-accts-map)
+    (define (is-selected acct) (not (eq? (hash-ref selected-accts-map (gncAccountGetGUID acct) 'not-found) 'not-found)))
+    (define (get-add-subtract-descendants-helper cur-acct is-root)
+;      (debug-log (string-append "at top of helper\n  subtract accounts is: " (object->string subtract-accts)
+;                   "\n  add accounts is: " (object->string add-accts)))
+      ;; setup list of results
+      (define result '())
+      (let ((parent-acct (gnc-account-get-parent cur-acct))
+             (children-accts (gnc-account-get-children-sorted cur-acct)))
+        (cond
+          ;; if this account is selected and its parent is (or we're on the root account, ignoring parent) no need to do
+          ;;   anything, this account is already included in its parent total
+          ((and (is-selected cur-acct) (or (is-selected parent-acct) is-root)) #f)
+          ;; same deal if neither this one or its parent are selected: we've already subtracted the total of the parent
+          ;;   account including this one so no need to do anything
+          ((and (not (is-selected cur-acct)) (not (is-selected parent-acct))) #f)
+          ;; if this account is selected but its parent is not we need to add this account to the 'add-accts' list since
+          ;;   its value is not included in its parent
+          ((and (is-selected cur-acct) (not (is-selected parent-acct)))
+            (set! result (cons (list 'add-acct cur-acct) result)))
+          ;; if this account is not selected but its parent is, we need to add it to the 'subtract-accts' list since its
+          ;;   value needs to be subtracted from the parent total
+          ((and (not (is-selected cur-acct)) (is-selected parent-acct))
+            (set! result (cons (list 'subtract-acct cur-acct) result)))
+        (else
+          (debug-log "ERROR should not hit this case")
+          result))
+        ;; recurse into children
+        (for-each
+          (lambda (child)
+            (set! result (append result (get-add-subtract-descendants-helper child #f))))
+          children-accts))
+        result)
+
+    (define acct-actions (get-add-subtract-descendants-helper parent-acct #t ))
+    (define subtract-accts '())
+    (define add-accts '())
+    (for-each
+      (lambda (item)
+        (cond
+          ((eq? (car item) 'add-acct)
+            (set! add-accts (cons (second item) add-accts)))
+          ((eq? (car item) 'subtract-acct)
+            (set! subtract-accts (cons (second item) subtract-accts)))))
+      acct-actions)
+
+    (if (or (> (length add-accts) 0) (> (length subtract-accts) 0))
+      (debug-log
+        (string-append "Account " (xaccAccountGetName parent-acct) " would subtract the following accounts:\n    "
+          (object->string (map (lambda (acct) (xaccAccountGetName acct)) subtract-accts))
+          "\nand add the following accounts:\n    "
+          (object->string (map (lambda (acct) (xaccAccountGetName acct)) add-accts)) "\n"))
+      )
+    (values subtract-accts add-accts))
+
+  (get-add-subtract-descendants parent-acct (map-accts-by-guid selected-accts)))
+
 
 ;; options generator
 (define (budget-report-options-generator)
@@ -135,6 +223,11 @@
      (gnc:make-simple-boolean-option
       gnc:pagename-general optname-accumulate
       "b" opthelp-accumulate #f))
+
+    (add-option
+      (gnc:make-simple-boolean-option
+        gnc:pagename-general optname-selected-only
+        "b" opthelp-selected-only #f))
 
     (add-option
      (gnc:make-complex-boolean-option
@@ -285,8 +378,10 @@
 (define (gnc:html-table-add-budget-values!
          html-table acct-table budget params)
 
-  (debug-log "Testing debug logging")
+  ; log the html-acct-table utility object
   (debug-log (object->string acct-table))
+  ; create list of accounts from account table
+
 
   (let* ((get-val (lambda (alist key)
                     (let ((lst (assoc-ref alist key)))
@@ -299,6 +394,8 @@
          (accumulate? (get-val params 'use-envelope))
          (show-totalcol? (get-val params 'show-totalcol))
          (use-ranges? (get-val params 'use-ranges))
+         (accounts (get-val params 'accounts))
+         (selected-only? (get-val params 'selected-only))
          (num-rows (gnc:html-acct-table-num-rows acct-table))
          (numcolumns (gnc:html-table-num-columns html-table))
          ;; WARNING: we implicitly depend here on the details of
@@ -320,12 +417,38 @@
     ;;
     ;; Return value:
     ;;   Budget sum
-    (define (gnc:get-account-periodlist-budget-value budget acct periodlist)
+    (define (gnc:get-single-account-periodlist-budget-value budget acct periodlist)
       (apply +
              (map
               (lambda (period)
                 (gnc:get-account-period-rolledup-budget-value budget acct period))
               periodlist)))
+
+    (define (gnc:get-account-periodlist-budget-value budget acct periodlist)
+      (receive (subtract-accts add-accts) (descendant-additions-subtractions acct accounts)
+;                (debug-log (string-append "subtract accounts:\n  " (object->string subtract-accts)
+;                               "\nadd accounts:\n  " (object->string add-accts) "\n  selected-only? " (object->string selected-only?)))
+        (let
+          ((acct-budget-val (gnc:get-single-account-periodlist-budget-value budget acct periodlist))
+           (subtract-budget-offset-val
+             (if selected-only?
+               (apply +
+                 (map
+                   (lambda (sub-acct)
+                     (gnc:get-single-account-periodlist-budget-value budget sub-acct periodlist))
+                   subtract-accts))
+               0))
+           (add-budget-offset-val
+             (if selected-only?
+               (apply +
+                 (map
+                   (lambda (add-acct)
+                     (gnc:get-single-account-periodlist-budget-value budget add-acct periodlist))
+                   add-accts))
+               0)))
+          (debug-log (string-append "subtract offset val: " (object->string subtract-budget-offset-val)
+                       " , add offset val: " (object->string add-budget-offset-val)))
+          (+ (- acct-budget-val subtract-budget-offset-val) add-budget-offset-val))))
     
     ;; Calculate the value to use for the actual of an account for a
     ;; specific set of periods.  This is the sum of the actuals for
@@ -338,11 +461,34 @@
     ;;
     ;; Return value:
     ;;   Budget sum
-    (define (gnc:get-account-periodlist-actual-value budget acct periodlist)
+    (define (gnc:get-single-account-periodlist-actual-value budget acct periodlist)
       (apply + (map
                 (lambda (period)
                   (gnc-budget-get-account-period-actual-value budget acct period))
                 periodlist)))
+
+    (define (gnc:get-account-periodlist-actual-value budget acct periodlist)
+      (receive (subtract-accts add-accts) (descendant-additions-subtractions acct accounts)
+        ;; TODO: compute values for add/subtract and do the arithmetic
+        (let
+          ((acct-actual-val (gnc:get-single-account-periodlist-actual-value budget acct periodlist))
+            (subtract-actual-offset-val
+              (if selected-only?
+                (apply +
+                  (map
+                    (lambda (sub-acct)
+                      (gnc:get-single-account-periodlist-actual-value budget sub-acct periodlist))
+                    subtract-accts))
+                0))
+            (add-actual-offset-val
+              (if selected-only?
+                (apply +
+                  (map
+                    (lambda (add-acct)
+                      (gnc:get-single-account-periodlist-actual-value budget add-acct periodlist))
+                    add-accts))
+                0)))
+            (+ (- acct-actual-val subtract-actual-offset-val) add-actual-offset-val))))
 
     ;; Adds a line to the budget report.
     ;;
@@ -437,6 +583,7 @@
                                bgt-total act-total dif-total #f))))
 
            ;; fwd-compatibility for unreversed budgets
+            ;; MY CHANGES to use rollover instead of accumulated
            (unreversed?
             (let* ((period-list (cond
                                  ((list? (car column-list)) (car column-list))
@@ -445,7 +592,7 @@
                    (period-list-prev (cond
                                        ((list? (car column-list)) (car column-list))
                                        (accumulate? (iota (car column-list)))
-                                       (else (list))))
+                                       (else '())))
                    (period-list-cur (cond
                                      ((list? (car column-list)) (car column-list))
                                      (else (list (car column-list)))))
@@ -664,6 +811,25 @@
       (gnc:debug "user-end-period-exact =" (get-val params 'user-end-period-exact))
       (gnc:debug "column-info-list=" column-info-list)
 
+      ;; DEBUG LOG accounts
+      (let ((num-rows (gnc:html-acct-table-num-rows acct-table)))
+        (let loop ((rownum 0))
+          (when (< rownum num-rows)
+            (let* ((env (gnc:html-acct-table-get-row-env acct-table rownum))
+                    (acct-name (get-val env 'account-name))
+                    (acct-guid (get-val env 'account-guid))
+                    (children (get-val env 'account-children))
+                    (children-guids (if children
+                                      (map (lambda (child) (gncAccountGetGUID child))
+                                        children)
+                                      '()))
+                    (children-str (string-append "Account Children: (" (string-join children-guids ", ") ")"))
+                    (debug-msg (string-append "Account Name: " acct-name ", Account GUID: " acct-guid
+                                 ", " children-str)))
+              (debug-log debug-msg))
+            (loop (1+ rownum)))))
+
+
       ;; call gnc:html-table-add-budget-line! for each account
       (let loop ((rownum 0))
         (when (< rownum num-rows)
@@ -776,7 +942,9 @@
                (list 'user-start-period-exact
                      (to-period-val optname-budget-period-start-exact))
                (list 'user-end-period-exact
-                     (to-period-val optname-budget-period-end-exact))))
+                     (to-period-val optname-budget-period-end-exact))
+               (list 'accounts accounts)
+               (list 'selected-only (get-option gnc:pagename-general optname-selected-only))))
              (report-name (get-option gnc:pagename-general
                                       gnc:optname-reportname)))
 
