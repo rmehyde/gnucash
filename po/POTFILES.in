@@ -384,6 +384,7 @@ gnucash/python/pycons/ishell.py
 gnucash/python/pycons/setup.py
 gnucash/python/pycons/shell.py
 gnucash/python/pycons/simple_plot.py
+gnucash/python/pyreports/__init__.py
 gnucash/register/ledger-core/gncEntryLedger.c
 gnucash/register/ledger-core/gncEntryLedgerControl.c
 gnucash/register/ledger-core/gncEntryLedgerDisplay.c

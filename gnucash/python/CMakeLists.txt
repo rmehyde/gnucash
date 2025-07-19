@@ -10,6 +10,12 @@ set(pycons_DATA
   pycons/simple_plot.py
 )
 
+set(pyreports_DATA
+        pyreports/__init__.py
+        pyreports/testreport.py
+)
+
+
 if (WITH_PYTHON)
 
   add_library(gncmod-python ${gncmod_python_SOURCES})
@@ -29,15 +35,17 @@ endif()
   )
 
   install(FILES ${pycons_DATA} DESTINATION  ${CMAKE_INSTALL_DATADIR}/gnucash/python/pycons)
+  install(FILES ${pyreports_DATA} DESTINATION ${CMAKE_INSTALL_DATADIR}/gnucash/python/pyreports)
   install(FILES init.py DESTINATION  ${CMAKE_INSTALL_DATADIR}/gnucash/python)
 
   file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/share/gnucash/python/pycons)
-  foreach(py_file ${pycons_DATA} init.py)
+  file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/share/gnucash/python/pyreports)
+  foreach(py_file ${pycons_DATA} ${pyreports_DATA} init.py)
       configure_file(${py_file} ${CMAKE_BINARY_DIR}/share/gnucash/python/${py_file} COPYONLY)
   endforeach()
 endif()
 
 set_local_dist(pycons_DIST ${pycons_DATA})
+set_local_dist(pyreports_DIST ${pyreports_DATA})
 set_local_dist(python_DIST_local CMakeLists.txt gncmod-python.c init.py)
-set(python_DIST ${python_DIST_local} ${pycons_DIST} PARENT_SCOPE)
-
+set(python_DIST ${python_DIST_local} ${pycons_DIST} ${pyreports_DIST} PARENT_SCOPE)
