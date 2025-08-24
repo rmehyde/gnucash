@@ -67,6 +67,7 @@ set(gnucash_GRESOURCES
   ui/gnc-plugin-customer-import.ui
   ui/gnc-plugin-file-history.ui
   ui/gnc-plugin-log-replay.ui
+  ui/gnc-plugin-python-menu.ui
   ui/gnc-plugin-register.ui
   ui/gnc-plugin-report-system.ui
   ui/gnc-plugin-page-account-tree.ui

@@ -33,6 +33,8 @@
 #include "gnc-module.h"
 #include "gnc-module-api.h"
 #include "gnc-path.h"
+#include "gnc-plugin-manager.h"
+#include "gnc-plugin-python-menu.h"
 
 GNC_MODULE_API_DECL(libgncmod_python)
 
@@ -102,6 +104,10 @@ libgncmod_python_gnc_module_init(int refcount)
     g_free(init_filename);
     g_free(pkgdatadir);
     PyConfig_Clear(&config);
+
+    /* register Python menu plugin */
+    GncPluginManager *manager = gnc_plugin_manager_get();
+    gnc_plugin_manager_add_plugin(manager, gnc_plugin_python_menu_new());
 
     return TRUE;
 }

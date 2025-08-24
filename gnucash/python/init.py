@@ -24,7 +24,6 @@ import signal
 old_sigttou = signal.signal(signal.SIGTTOU, signal.SIG_IGN)
 
 import pycons.console as cons
-from pyreports import render_test_html
 
 # Restore the SIGTTOU handler
 signal.signal(signal.SIGTTOU, old_sigttou)
@@ -103,16 +102,6 @@ class Console (cons.Console):
 
         self.write("\n" + _("Have a nice day!") + "\n")
         return super(Console, self).quit()
-
-
-print("\n\n\n\n\n", file=sys.stderr)
-print("=== HELLO FROM PYTHON PHASE 1 TEST ===", file=sys.stderr)
-print("Python is successfully embedded in GnuCash!", file=sys.stderr)
-print("Python version:", sys.version, file=sys.stderr)
-print("======================================", file=sys.stderr)
-print(f"HTML contents:\n{render_test_html()}", file=sys.stderr)
-print("\n\n\n\n\n", file=sys.stderr)
-
 
 
 # Change this to "if True:" to switch on a python console at gnucash

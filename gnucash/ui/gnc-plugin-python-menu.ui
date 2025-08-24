@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <menu id="PythonPlaceholder0">
+    <item>
+      <attribute name="label" translatable="no">Test Python Report</attribute>
+      <attribute name="action">gnc-plugin-python-menu-actions.PythonTestReportAction</attribute>
+      <attribute name="tooltip" translatable="no">Run Python test report function</attribute>
+    </item>
+  </menu>
+</interface>
