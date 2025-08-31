@@ -2,9 +2,14 @@
 <interface>
   <menu id="PythonPlaceholder0">
     <item>
-      <attribute name="label" translatable="no">Test Python Report</attribute>
-      <attribute name="action">gnc-plugin-python-menu-actions.PythonTestReportAction</attribute>
-      <attribute name="tooltip" translatable="no">Run Python test report function</attribute>
+      <attribute name="label" translatable="no">Test Python Call</attribute>
+      <attribute name="action">gnc-plugin-python-menu-actions.TestPythonCallAction</attribute>
+      <attribute name="tooltip" translatable="no">Call into Python code and print result</attribute>
+    </item>
+    <item>
+      <attribute name="label" translatable="no">Open Existing Report</attribute>
+      <attribute name="action">gnc-plugin-python-menu-actions.PythonTestExistingReportAction</attribute>
+      <attribute name="tooltip" translatable="no">Open a new tab with Report 0</attribute>
     </item>
   </menu>
 </interface>

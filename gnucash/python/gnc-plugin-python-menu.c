@@ -6,6 +6,7 @@
 #include "gnc-plugin-python-menu.h"
 #include "gnc-main-window.h"
 #include "gnc-plugin-page.h"
+#include "gnucash/gnome/gnc-plugin-page-report.h"
 
 static void gnc_plugin_python_menu_class_init (GncPluginPythonMenuClass *klass);
 static void gnc_plugin_python_menu_init (GncPluginPythonMenu *plugin);
@@ -13,13 +14,15 @@ static void gnc_plugin_python_menu_finalize (GObject *object);
 
 /* Command callbacks */
 static void gnc_plugin_python_cmd_test_report (GSimpleAction *simple, GVariant *parameter, gpointer user_data);
+static void gnc_plugin_python_open_exiting_report_tab(GSimpleAction *simple, GVariant *parameter, gpointer user_data);
 
 #define PLUGIN_ACTIONS_NAME "gnc-plugin-python-menu-actions"
 #define PLUGIN_UI_FILENAME  "gnc-plugin-python-menu.ui"
 
 // we'll use this in plugin init to wire the menu item Action to the actual function
 static GActionEntry gnc_plugin_actions [] = {
-    { "PythonTestReportAction", gnc_plugin_python_cmd_test_report, NULL, NULL, NULL },
+    { "TestPythonCallAction", gnc_plugin_python_cmd_test_report, NULL, NULL, NULL },
+    { "PythonTestExistingReportAction", gnc_plugin_python_open_exiting_report_tab, NULL, NULL, NULL },
 };
 static guint gnc_plugin_n_actions = G_N_ELEMENTS (gnc_plugin_actions);
 
@@ -69,16 +72,27 @@ gnc_plugin_python_menu_finalize (GObject *object)
     G_OBJECT_CLASS (gnc_plugin_python_menu_parent_class)->finalize (object);
 }
 
+// menu action callback to open an existing report
+static void
+gnc_plugin_python_open_exiting_report_tab(GSimpleAction *simple, GVariant *parameter, gpointer user_data) {
+   // get main window
+    GncMainWindowActionData *mw = user_data;
+    g_return_if_fail (mw != NULL);
+
+    // open exiting report in main window
+    gnc_main_window_open_report(0, mw->window);
+}
+
 // menu action callback to run the Python report
 static void
 gnc_plugin_python_cmd_test_report (GSimpleAction *simple, GVariant *parameter, gpointer user_data)
 {
     PyGILState_STATE gstate;
     PyObject *module, *function, *result;
-    
+
     /* Acquire the GIL */
     gstate = PyGILState_Ensure();
-    
+
     /* Import the pyreports module */
     module = PyImport_ImportModule("pyreports");
     if (module == NULL) {
@@ -89,7 +103,7 @@ gnc_plugin_python_cmd_test_report (GSimpleAction *simple, GVariant *parameter, g
         PyGILState_Release(gstate);
         return;
     }
-    
+
     /* Get the render_test_html function */
     function = PyObject_GetAttrString(module, "render_test_html");
     if (function == NULL || !PyCallable_Check(function)) {
@@ -101,7 +115,7 @@ gnc_plugin_python_cmd_test_report (GSimpleAction *simple, GVariant *parameter, g
         PyGILState_Release(gstate);
         return;
     }
-    
+
     /* Call the function */
     result = PyObject_CallObject(function, NULL);
     if (result == NULL) {
@@ -120,11 +134,11 @@ gnc_plugin_python_cmd_test_report (GSimpleAction *simple, GVariant *parameter, g
         }
         Py_DECREF(result);
     }
-    
+
     /* Cleanup */
     Py_DECREF(function);
     Py_DECREF(module);
-    
+
     /* Release the GIL */
     PyGILState_Release(gstate);
 }
