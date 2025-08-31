@@ -37,6 +37,7 @@ typedef const char* URLType;
 #define URL_TYPE_REGISTER   "register"   /* for gnucash register popups */
 #define URL_TYPE_ACCTTREE   "accttree"   /* for account tree windows */
 #define URL_TYPE_REPORT     "report"     /* for gnucash report popups */
+#define URL_TYPE_PYREPORT   "pyreport"   /* for gnucash python report popups */
 #define URL_TYPE_OPTIONS    "options"    /* for editing report options */
 #define URL_TYPE_SCHEME     "scheme"     /* for scheme code evaluation */
 #define URL_TYPE_HELP       "help"       /* for a gnucash help window */

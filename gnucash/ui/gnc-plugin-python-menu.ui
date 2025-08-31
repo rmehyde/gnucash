@@ -2,6 +2,11 @@
 <interface>
   <menu id="PythonPlaceholder0">
     <item>
+      <attribute name="label" translatable="no">Sample Python Report</attribute>
+      <attribute name="action">gnc-plugin-python-menu-actions.SamplePythonReportAction</attribute>
+      <attribute name="tooltip" translatable="no">Open a sample report with Python-generated HTML</attribute>
+    </item>
+    <item>
       <attribute name="label" translatable="no">Test Python Call</attribute>
       <attribute name="action">gnc-plugin-python-menu-actions.TestPythonCallAction</attribute>
       <attribute name="tooltip" translatable="no">Call into Python code and print result</attribute>

@@ -377,6 +377,7 @@ gnucash/import-export/qif-imp/qif-to-gnc.scm
 gnucash/import-export/qif-imp/qif-utils.scm
 gnucash/import-export/qif-imp/string.scm
 gnucash/python/gncmod-python.c
+gnucash/python/gnc-plugin-page-pyreport.c
 gnucash/python/gnc-plugin-python-menu.c
 gnucash/python/init.py
 gnucash/python/pycons/console.py
@@ -386,6 +387,9 @@ gnucash/python/pycons/setup.py
 gnucash/python/pycons/shell.py
 gnucash/python/pycons/simple_plot.py
 gnucash/python/pyreports/__init__.py
+gnucash/python/pyreports/pyreport.py
+gnucash/python/pyreports/reports/hello.py
+gnucash/python/pyreports/reports/__init__.py
 gnucash/register/ledger-core/gncEntryLedger.c
 gnucash/register/ledger-core/gncEntryLedgerControl.c
 gnucash/register/ledger-core/gncEntryLedgerDisplay.c

@@ -1,10 +1,12 @@
 set(gncmod_python_SOURCES 
     gncmod-python.c
     gnc-plugin-python-menu.c
+    gnc-plugin-page-pyreport.c
 )
 
 set(python_HEADERS
     gnc-plugin-python-menu.h
+    gnc-plugin-page-pyreport.h
 )
 
 set(pycons_DATA
@@ -19,9 +21,11 @@ set(pycons_DATA
 
 set(pyreports_DATA
         pyreports/__init__.py
+        pyreports/pyreport.py
         pyreports/testreport.py
+        pyreports/reports/__init__.py
+        pyreports/reports/hello.py
 )
-
 
 if (WITH_PYTHON)
 
