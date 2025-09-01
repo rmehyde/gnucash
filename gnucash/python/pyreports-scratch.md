@@ -1,0 +1,15 @@
+- extension vs report abstraction
+  - scheme has extension abstraction (create menu with callback)
+  - should we do the same for Python or just hardcode report? hardcode HTML renderer? (I like that as a middle ground)
+- vendoring Python
+  - if a release includes dependencies on Python reports, we need to vendor in Python and deps
+- reimplement in Python or extend existing reports?
+  - we could directly extend the reports package to include Python functionality in parallel
+  - or we could build out that parallel functionality in the python package
+    - probably requires a little more reimplementation, but better separability
+  - e.g. should we have a separate Python Reports plugin, or bake it into existing one?
+- we'll start by skipping over instance/template issues
+  - Scheme has some stuff to actually _create report instances from templates_ and register/persist them
+  - This is where the IDs starting from zero come in
+  - I'm not totally sure why this is important: it might have to do with re-opening reports across sessions or something else
+  - I'll skip over that part for a first pass in the Python implementation: I can just reference report _templates_
